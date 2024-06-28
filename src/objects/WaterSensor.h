@@ -1,6 +1,7 @@
 #ifndef WATERSENSOR_H
 #define WATERSENSOR_H
 
+#include "Pooly.h"
 class WaterSensor{
     private:
         int _pin;

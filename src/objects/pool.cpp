@@ -1,14 +1,13 @@
 #include <Arduino.h>
 void arrayShift(float array[], int length);
 
-# include "Pool.h"
-# include "Pump.h"
-# include "WaterSensor.h"
+#include "Pooly.h"
 
 Pool::Pool(float waterVolume){
     this->_waterVolume= waterVolume;
     this->_chlorinePump= nullptr;
-    this->_phPump= nullptr; 
+    this->_phPlusPump= nullptr; 
+    this->_phMinusPump= nullptr; 
     this->_masterPump= nullptr; 
     this->_waterPump= nullptr; 
     this->_chlorineSensor= nullptr; 
@@ -16,7 +15,7 @@ Pool::Pool(float waterVolume){
     this->_waterLevelSensor= nullptr; 
     this->_waterTemperatureSensor= nullptr; 
 
-    for (int i=0; i<MAX; i++){
+    for (int i=0; i<POOLMEMORY; i++){
         this->_waterChlorine[i]= 0.0;
         this->_waterLevel[i]= 0.0;
         this->_waterPh[i]= 0.0;
@@ -24,7 +23,28 @@ Pool::Pool(float waterVolume){
     }
 }
 
-// privati
+bool Pool::hasSensor(WaterSensor* sensor){
+    bool res= false;
+
+    if (sensor != nullptr){
+        res= true;
+    }else{
+        res= false;
+    }
+    return res;
+}
+
+bool Pool::hasPump(Pump* pump){
+    bool res= false;
+
+    if (pump != nullptr){
+        res= true;
+    }else{
+        res= false;
+    }
+    return res;
+}
+
 void Pool::replaceSensor(WaterSensor*& oldSensor, WaterSensor* newSensor){
     delete oldSensor;
     oldSensor= newSensor;
@@ -35,24 +55,14 @@ void Pool::replacePump(Pump*& oldPump, Pump* newPump){
     oldPump= newPump;
 }
 
-// set pompe
-void Pool::setChlorinePump(Pump* pump){
-    this->replacePump(this->_chlorinePump, pump);
-}
+// set variabili 
 
-void Pool::setPhPump(Pump* pump){
-    this->replacePump(this->_phPump, pump);        
-}
-
-void Pool::setMasterPump(Pump* pump){
-    this->replacePump(this->_masterPump, pump);
-}
-
-void Pool::setWaterPump(Pump* pump){
-    this->replacePump(this->_waterPump, pump);
+void Pool::setRemainingFilteringTime(int remainingMinutes){
+    this->_remainingFilteringTime= remainingMinutes;
 }
 
 // set sensori
+
 void Pool::setChlorineSensor(WaterSensor* sensor) {
     this->replaceSensor(this->_chlorineSensor, sensor);
 }
@@ -69,7 +79,58 @@ void Pool::setWaterTemperatureSensor(WaterSensor* sensor) {
     this->replaceSensor(this->_waterTemperatureSensor, sensor);
 }
 
-//
+// set pompe
+
+void Pool::setChlorinePump(Pump* pump){
+    this->replacePump(this->_chlorinePump, pump);
+}
+
+void Pool::setPhPlusPump(Pump* pump){
+    this->replacePump(this->_phPlusPump, pump);        
+}
+
+void Pool::setPhMinusPump(Pump* pump){
+    this->replacePump(this->_phMinusPump, pump);        
+}
+
+void Pool::setMasterPump(Pump* pump){
+    this->replacePump(this->_masterPump, pump);
+}
+
+void Pool::setWaterPump(Pump* pump){
+    this->replacePump(this->_waterPump, pump);
+}
+
+// check se sono presenti sensori
+
+bool Pool::hasChlorineSensor(){
+    return hasSensor(this->_chlorineSensor);
+}
+
+bool Pool::hasPhSensor(){
+    return hasSensor(this->_phSensor);
+}
+
+bool Pool::hasWaterLevelSensor(){
+    return hasSensor(this->_waterLevelSensor);
+}
+
+bool Pool::hasWaterTemperatureSensor(){
+    return hasSensor(this->_waterTemperatureSensor);
+}
+
+// get variabili
+
+float Pool::getWaterVolume(){
+    return this->_waterVolume;
+}
+
+float Pool::getRemainingFilteringTime(){
+    return this->_remainingFilteringTime;
+}
+
+// get valori misurati dai sensori
+
 float Pool::getWaterChlorine(){
     return this->_waterChlorine[0];
 }
@@ -86,12 +147,35 @@ float Pool::getWaterTemperature(){
     return this->_waterTemperature[0];
 }
 
-void Pool::updateStatus() {
+// get pompe
 
-    arrayShift(_waterChlorine, MAX);
-    arrayShift(_waterLevel, MAX);
-    arrayShift(_waterPh, MAX);
-    arrayShift(_waterTemperature, MAX);
+Pump* Pool::getChlorinePump(){
+    return this->_chlorinePump;
+}
+
+Pump* Pool::getPhPlusPump(){
+    return this->_phPlusPump;
+}
+
+Pump* Pool::getPhMinusPump(){
+    return this->_phMinusPump;
+}
+
+Pump* Pool::getMasterPump(){
+    return this->_masterPump;
+}
+
+Pump* Pool::getWaterPump(){
+    return this->_waterPump;
+}
+
+// logica
+void Pool::updateWaterStatus() {
+
+    arrayShift(_waterChlorine, POOLMEMORY);
+    arrayShift(_waterLevel, POOLMEMORY);
+    arrayShift(_waterPh, POOLMEMORY);
+    arrayShift(_waterTemperature, POOLMEMORY);
 
     int maxIterations = 5;
 
@@ -101,19 +185,20 @@ void Pool::updateStatus() {
     float sumTemperature = 0.0;
 
     for (int i = 0; i < maxIterations; i++) {
-        if (_chlorineSensor != nullptr) {
+        
+        if (this->hasChlorineSensor()) {
             sumChlorine= sumChlorine +  _chlorineSensor->getMeasurement();
         }
 
-        if (true) {
+        if (this->hasPhSensor()) {
             sumPh= sumPh +  _phSensor->getMeasurement();
         }
 
-        if (_waterLevelSensor != nullptr) {
+        if (this->hasWaterLevelSensor()) {
             sumLevel= sumLevel + _waterLevelSensor->getMeasurement();
         }
 
-        if (_waterTemperatureSensor != nullptr) {
+        if (this->hasWaterTemperatureSensor()) {
             sumTemperature= sumTemperature + _waterTemperatureSensor->getMeasurement();
         }
 
@@ -121,28 +206,38 @@ void Pool::updateStatus() {
     }
 
  
-    if (_chlorineSensor != nullptr ) {
+    if (this->hasChlorineSensor() ) {
         _waterChlorine[0] = sumChlorine / maxIterations;
     }
 
-    if (true) {
+    if (this->hasPhSensor()) {
         _waterPh[0] = sumPh / maxIterations;
     }
 
-    if (_waterLevelSensor != nullptr) {
+    if (this->hasWaterLevelSensor()) {
         _waterLevel[0] = sumLevel / maxIterations;
     }
 
-    if (_waterTemperatureSensor != nullptr) {
+    if (this->hasWaterTemperatureSensor()) {
         _waterTemperature[0] = sumTemperature / maxIterations;
     }
 }
 
+int Pool::calculateRecirculationMinutes(){
+    int res=0;
+
+    float waterVolume= this->_waterVolume;
+    float masterPumpFlow= this->_waterPump->getPumpFlow();
+
+    res= (waterVolume/masterPumpFlow) * 60;
+
+    return res; 
+}
 
 // utils
 void arrayShift(float array[], int length){
     
-    for (int i = length-1; i> 0;i--){
+    for (int i = length-1; i> 0; i--){
         array[i]= array[i-1];
     }
 

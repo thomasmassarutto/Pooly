@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-# include "Pump.h"
+#include "Pooly.h"
 
 Pump::Pump(int pin, float flow){
     pinMode(pin, OUTPUT);
@@ -8,10 +8,15 @@ Pump::Pump(int pin, float flow){
     this->_flow= flow;
 }
 
+// get
 int Pump::getPin(){
     return this->_pin;
 }
+float Pump::getPumpFlow(){
+    return this->_flow;
+}
 
+// azioni
 void Pump::pumpStart(){
     this->_pump_status= true;
     digitalWrite(_pin, HIGH);
@@ -22,11 +27,11 @@ void Pump::pumpStop(){
     this->_pump_status= false;
 }
 
-void Pump::activatePump(int seconds){
+void Pump::activatePump(int milliSeconds){
     this->_pump_status= true;
     digitalWrite(_pin, HIGH);
     
-    delay(seconds * 1000);
+    delay(milliSeconds);
     
     digitalWrite(_pin, LOW);
     this->_pump_status= true;

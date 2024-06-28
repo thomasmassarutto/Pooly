@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "WaterSensor.h"
+#include "Pooly.h"
 
 WaterSensor::WaterSensor(int pin){
     this->_pin= pin;
